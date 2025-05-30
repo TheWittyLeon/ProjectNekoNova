@@ -1,0 +1,5 @@
+.env
+.venv
+__pycache__/blackjack_game.cpython-312.pyc
+/website/suzu-react-site/node_modules
+node_modules/

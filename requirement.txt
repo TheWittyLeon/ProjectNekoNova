@@ -1,0 +1,12 @@
+flask
+flask_cors
+python-dotenv
+google-generativeai
+pyttsx3
+gtts
+pygame 
+ffmpeg-python
+requests
+twitchio
+ollama
+discord.py[voice] PyNaCl

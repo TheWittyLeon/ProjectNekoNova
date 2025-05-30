@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spotify Player Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .container { border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0 15px; }
+        button { background: #1DB954; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+        button:hover { background: #1ED760; }
+        #response { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #dff0d8; border: 1px solid #d6e9c6; }
+        .error { background: #f2dede; border: 1px solid #ebccd1; }
+        .track-result {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .track-result:hover {
+            background: #f8f8f8;
+        }
+        .album-art {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            border-radius: 4px;
+        }
+        .track-info {
+            flex-grow: 1;
+        }
+        .preview-player {
+            margin-top: 5px;
+            height: 25px;
+        }
+        #searchResults {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .debounce-notice {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Spotify Player Test</h2>
+        
+        <div>
+            <button onclick="refreshDevices()">Refresh Devices</button>
+            <select id="devices"></select>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <input type="text" id="searchInput" placeholder="Search for songs or artists..." 
+                   style="width: 100%" onkeyup="debounceSearch()">
+            <span class="debounce-notice">(Search starts after 300ms pause)</span>
+            <div id="searchResults"></div>
+        </div>
+
+        <div id="response"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let debounceTimer;
+        const debounceTime = 300;
+
+        // Load devices on page load
+        $(document).ready(refreshDevices);
+
+        function refreshDevices() {
+            $.get("/devices")
+                .done(function(data) {
+                    $('#devices').empty();
+                    data.devices.forEach(device => {
+                        $('#devices').append(
+                            $(`<option value="${device.id}">`)
+                            .text(`${device.name} (${device.type})`)
+                        );
+                    });
+                })
+                .fail(() => showError("Failed to load devices"));
+        }
+
+        function debounceSearch() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(performSearch, debounceTime);
+        }
+
+        function performSearch() {
+            const query = $('#searchInput').val().trim();
+            if (query.length < 2) {
+                $('#searchResults').empty();
+                return;
+            }
+
+            $.ajax({
+                url: "/search",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ query: query }),
+                success: (data) => {
+                    displayResults(data.results);
+                },
+                error: () => showError("Search failed")
+            });
+        }
+
+        function displayResults(tracks) {
+            const resultsDiv = $('#searchResults').empty();
+            
+            if (tracks.length === 0) {
+                resultsDiv.append('<div class="error">No results found</div>');
+                return;
+            }
+
+            tracks.forEach(track => {
+                const trackElement = $('<div class="track-result">')
+                    .click(() => selectTrack(track.uri));
+                
+                // Album art
+                if (track.album_art) {
+                    trackElement.append(
+                        $(`<img class="album-art" src="${track.album_art}" alt="Album cover">`)
+                    );
+                }
+
+                // Track info
+                const infoDiv = $('<div class="track-info">')
+                    .append(`<strong>${track.name}</strong><br>${track.artist}`);
+
+                // Audio preview
+                if (track.preview_url) {
+                    infoDiv.append(
+                        $('<audio class="preview-player" controls>')
+                            .append($(`<source src="${track.preview_url}" type="audio/mpeg">`))
+                    );
+                }
+
+                trackElement.append(infoDiv);
+                resultsDiv.append(trackElement);
+            });
+        }
+
+        function selectTrack(uri) {
+            const deviceId = $('#devices').val();
+            
+            $.ajax({
+                url: "/play",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    track_uri: uri,
+                    device_id: deviceId
+                }),
+                success: (data) => {
+                    showSuccess(`Now playing: ${data.uri.split(':')[2]}`);
+                    $('#searchInput').val(''); // Clear search
+                    $('#searchResults').empty(); // Clear results
+                },
+                error: (xhr) => {
+                    showError(xhr.responseJSON?.error || "Playback failed");
+                }
+            });
+        }
+
+        function showSuccess(message) {
+            $('#response').removeClass('error').addClass('success').text(message);
+        }
+
+        function showError(message) {
+            $('#response').removeClass('success').addClass('error').text(message);
+        }
+    </script>
+</body>
+</html>

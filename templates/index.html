@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suzu AI Chat</title>
+</head>
+<body>
+    <h1>Suzu AI - Chat & TTS</h1>
+    
+    <textarea id="textInput" rows="4" cols="50" placeholder="Enter text here..."></textarea><br>
+    <button onclick="generateText()">Chat</button>
+    <button onclick="sendText()">Speak</button>
+
+    <h2>Response:</h2>
+    <p id="responseText"></p>
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        function generateText() {
+            let text = document.getElementById("textInput").value;
+            fetch("/localgenerate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let suzuResponse = data.response || data.error;
+                document.getElementById("responseText").innerText = suzuResponse;
+    
+                // Automatically send Suzu's response to TTS
+                fetch("/speak", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: suzuResponse }) // Send Suzu's response, not user input
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.audio_url) {
+                        document.getElementById("audioPlayer").src = data.audio_url;
+                        document.getElementById("audioPlayer").play();
+                    }
+                });
+            });
+        }
+    </script>    
+</body>
+</html>

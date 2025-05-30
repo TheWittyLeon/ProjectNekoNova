@@ -46,13 +46,14 @@ SUZU_PROMPT=the_ai_prompt_you_want_to_use
 **Note:** Replace the placeholder values with your actual credentials.
 
 ### Running the Project
-
+```running project
 For full fuctionality run the following commands
 python suzu_api.py # this is the bot's main api interface
 python suzu_twitch_api_server.py # this is the twitch api server that handles twitch
 python discord_api.py   # this is the discord api server that handles discord
 cd website\suzu-react-site  # this is the react website
 npm run dev # this is to run the website which is the frontend and turn the bot on and off for currently just twitch
+```
 
 Refer to the [documentation](docs/) for more details on each module.
 
